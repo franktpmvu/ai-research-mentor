@@ -1,0 +1,40 @@
+{
+  "quarters": {
+    "Q1": {
+      "weeks": "1-13",
+      "theme": "基礎鞏固 + SOTA 跟進",
+      "weekly_goals": {
+        "1": {
+          "cv": "DETR 系列：消除 NMS 的機制，訓練收斂問題",
+          "llm": "Transformer Attention 數學推導，KV Cache 原理",
+          "diffusion": "DDPM 前向加噪 q(x_t|x_0)，L_simple vs L_vlb",
+          "completion_criteria": {
+            "cv": ["能解釋 DETR 如何消除 NMS", "指出訓練收斂慢的根本原因"],
+            "llm": ["推導 Scaled Dot-Product Attention 複雜度", "解釋 KV Cache 加速推理原理"],
+            "diffusion": ["解釋前向加噪數學意義", "說明為何預測 ε 優於預測 x₀"],
+            "cross": ["舉出三領域共同面對的核心挑戰"]
+          }
+        },
+        "2": {
+          "cv": "Conditional DETR / DAB-DETR：query 設計演進",
+          "llm": "Multi-Head Attention 的幾何直覺，Layer Norm 位置",
+          "diffusion": "DDIM：non-Markovian 推導，確定性採樣",
+          "completion_criteria": {
+            "cv": ["解釋 anchor point 如何改善收斂"],
+            "llm": ["解釋不同 head 學到不同 pattern 的直覺"],
+            "diffusion": ["推導 DDIM 的 deterministic sampling 公式"]
+          }
+        }
+      }
+    },
+    "Q2": { "weeks": "14-26", "theme": "跨領域整合 + 進階技術" },
+    "Q3": { "weeks": "27-39", "theme": "實作導向 + 架構微調" },
+    "Q4": { "weeks": "40-52", "theme": "自主創新 + 前瞻趨勢" }
+  },
+  "annual_kpis": {
+    "cv": "30分鐘批判性閱讀任一頂會論文，指出3個實驗設計問題",
+    "llm": "從 Transformer 推導 MoE/GQA/RoPE 的動機與數學",
+    "diffusion": "從 score matching 推導 DDPM→DDIM→Flow Matching 演進",
+    "cross": "設計融合三領域的完整系統方案"
+  }
+}

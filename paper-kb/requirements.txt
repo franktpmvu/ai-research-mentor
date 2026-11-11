@@ -1,0 +1,4 @@
+# 用 server：只需要 mcp（Python 3.10+）
+mcp>=2.3,<3
+# 跑 update.py（解析 PDF）：Python 3.11+
+pymupdf4llm==2.1

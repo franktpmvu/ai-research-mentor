@@ -1,0 +1,10 @@
+data/
+input_raw/
+corpus/
+corpus/_work/
+__pycache__/
+*.pyc
+*_v[0-9]*.py
+.venv/
+data/derived/.maintain.lock
+config.json

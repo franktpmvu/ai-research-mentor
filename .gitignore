@@ -1,0 +1,35 @@
+# ── 個人設定（每個人自己填，不上傳）──
+mentor/profile.md
+paper-kb/config.json
+
+# ── mentor 的個人狀態與紀錄（執行後自動產生，不上傳）──
+mentor/state.json
+mentor/learner.json
+mentor/learner_archive.json
+mentor/memory/
+mentor/memory.json*
+mentor/journal/
+mentor/digests/
+mentor/reviews/
+mentor/archive/
+mentor/push_log.json
+mentor/push_log_archive.json
+mentor/week_plan.json
+mentor/kg.json
+mentor/nutrition_log.json
+mentor/nutrition_roadmap.json
+mentor/pending_interests.md
+mentor/paper_xlsx_pending.json
+mentor/*.xlsx
+mentor/~$*
+
+# ── paper-kb 的資料（PDF 是出版品；索引可重建）──
+paper-kb/data/
+paper-kb/input_raw/
+paper-kb/corpus/
+paper-kb/.venv/
+
+# ── 其他 ──
+__pycache__/
+*.pyc
+.DS_Store

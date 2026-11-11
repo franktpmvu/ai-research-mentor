@@ -1,0 +1,9 @@
+{
+  "_說明": "複製成 config.json 再改；沒有 config.json 也能跑（mine 視為空）",
+  "mine": {
+    "myPaper2024_refs": [
+      "MyPaper2024_cameraready",
+      "2401.00000"
+    ]
+  }
+}
