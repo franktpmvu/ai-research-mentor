@@ -23,6 +23,7 @@ Commands:
 
   ── 導師層級記憶（memory.json，累積資產）──
   mem_add --title "..." --domain D [--url --summary --importance N --rubric "a||b" --questions "..." --pid slug]
+  refcheck check|text|manual|audit_xlsx|ledger   文獻強制核實（mem_add/push_log/paper_xlsx 會自動呼叫，未過即拒絕）
   mem_consolidate                    記憶自優化（升層/淡出）
   mem_context                        推薦前必讀的記憶脈絡摘要
   mem_view [layer]                   檢視各層記憶
@@ -1370,6 +1371,15 @@ def mem_add(flags):
         save_mem(mem)
         print(f"🔁 已強化記憶（{layer}層）: {title[:40]}  seen={existing['seen_count']} imp={existing['importance']}")
         return
+    # 2026-11-12 文獻強制核實：新論文進記憶前必須查得到、標題必須是正式標題（refcheck.py）。沒有略過開關。
+    if flags.get("type", "paper") == "paper":
+        import refcheck as _rc
+        _r = _rc.verify(title=title, url=url)
+        if _r["status"] != "verified":
+            print(f"⛔ 文獻核實未通過（{_r['status']}）：{_r.get('problem', '')}")
+            print("   → 改用正式標題／正確網址重跑；非 arXiv 文獻先上網查，再 `python3 refcheck.py manual ...` 登記證據。")
+            sys.exit(5)
+        print(f"🔎 已核實：{_r.get('true_title')}（{_r.get('source')}）")
     tags_raw = flags.get("tags", "")
     pid = flags.get("pid") if isinstance(flags.get("pid"), str) else f"m{int(datetime.now().timestamp())}"
     item = {
@@ -2550,6 +2560,27 @@ def push_log(flags):
                     if r in kg["nodes"] and _kg_recommendable(r, kg["nodes"][r], kg_passed)]
             problems.append(f"{p['pid']}: 🔴 KG LOCKED 缺先修 {unmet}"
                             f"（改推其先修前沿：{sugg or '先擴圖譜'}）")
+    # ⑥ 文獻強制核實（2026-11-12）：每一篇要推給使用者的文獻都要查得到、標題正確；未過與缺 anchor 同級 → exit 3
+    import refcheck as _rc
+    _mem_urls = {}
+    try:
+        _mem = load_memory()
+        for _name, *_ in MEMORY_LAYERS:
+            for _it in _mem["layers"][_name]["items"]:
+                if _it.get("id"):
+                    _mem_urls[_it["id"]] = _it.get("url", "")
+    except Exception:
+        pass
+    for p in papers:
+        _u = p.get("url") or _mem_urls.get(p["pid"], "") or (PAPERS.get(p["pid"], {}) or {}).get("url", "")
+        if not _u:
+            problems.append(f"{p['pid']}: 🔎 缺來源網址（每篇推播都要附可查證的出處：論文/期刊/新聞原文，第四欄 url）")
+            continue
+        # main：標題＋網址都要對；跨域/金融/wild 的標題是中文講法，只核實「出處網址真的存在且已查證」
+        _t = (p.get("title") or p["pid"]) if p["role"] in ("main", "review") else ""
+        _ok, _why = _rc.is_verified(title=_t, url=_u)
+        if not _ok:
+            problems.append(f"{p['pid']}: 🔎 文獻未核實 → {_why}")
     comp = {r: sum(1 for p in papers if p["role"] == r) for r in PUSH_ROLES}
     state = load(STATE_FILE)
     # 2026-08-05：節流/精簡模式已移除——超輕量模式（light_checkin）已能涵蓋「沒力氣深讀」的情境，
@@ -3263,6 +3294,7 @@ def main():
     elif cmd == "week_plan":       week_plan(sys.argv[2:])
     elif cmd == "daily_brief":     daily_brief()
     elif cmd == "push_log":        push_log(_parse_flags(sys.argv[2:]))
+    elif cmd == "refcheck":        import refcheck; refcheck.main(sys.argv[2:])
     elif cmd == "roadmap_set":     roadmap_set(_parse_flags(sys.argv[2:]))
     elif cmd == "kg_seed":         kg_seed("--force" in sys.argv)
     elif cmd == "kg_add":          kg_add(_parse_flags(sys.argv[2:]))

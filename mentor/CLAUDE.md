@@ -27,16 +27,17 @@
 |---|---|
 | 每日主研究軌推播：3 主領域（CV/LLM/Diffusion）+ 跨域鏡子 + 金融鏡子 + wild + 知識圖譜先修守門 + 記憶系統 | `docs/daily_push.md` |
 | 使用者深讀作答評估（teaser/deep/review）、**蘇格拉底式提問規則**、**順帶驗收舊概念 recall**、**技能地圖 skill_map**、learner 狀態升降級、streak、極輕量模式、方向回饋重新指路、瑣碎記憶、對話總結 | `docs/learner_eval.md` |
-| 使用者說 done 且當次有真的討論論文 → 自動寫入 `論文閱讀.xlsx`（note＝使用者逐字原話、question＝導師精煉＋思考軌跡、M 欄對話脈絡） | `docs/learner_eval.md` 的「論文閱讀.xlsx 自動登錄」 |
+| 使用者說 done 且當次有真的討論論文 → 自動寫入 `論文閱讀.xlsx`（note＝使用者逐字原話、question＝導師精煉＋思考軌跡、M 欄對話脈絡），再用 `sheetsync.py` 鏡像到 Google Sheet | `docs/learner_eval.md` 的「論文閱讀.xlsx 自動登錄」 |
+| **任何文獻要講出口、進記憶、推播、寫試算表之前**：強制核實（`refcheck.py`，三個入口程式把關，沒有略過開關） | `docs/refcheck.md` |
 | 講機制前用 paper-kb 核對論文原文、done 時把讀過的論文排進 paper-kb（沒裝 paper-kb 會自動略過） | `docs/paper_kb.md` |
 | 營養學獨立實用軌（211餐盤/168斷食等，與主研究軌完全分離，用 nutrition.py） | `docs/nutrition.md` |
 | 要改 `mentor.py`、`integrity` 檢查失敗、系統報錯、想知道各狀態檔案的用途與可否重置 | `docs/dev_maintenance.md` |
 | 忘記某個 CLI 指令怎麼打 | `docs/commands.md` |
 | 想知道某條規則的緣由、歷史沿革、曾經踩過的坑 | `docs/changelog.md`（日常執行不需要讀這份） |
 
-**每日排程標準順序**：`docs/daily_push.md`（主研究軌推播）→ `docs/learner_eval.md` 的「主線 2」（學習者狀態）→ `docs/nutrition.md`（營養軌）。若使用者當次有實質互動，收尾再依 `docs/learner_eval.md` 裡的「瑣碎記憶」「論文閱讀.xlsx 自動登錄」「對話總結」章節處理（done 收尾順序：`recall`（若有，順帶驗收舊概念）→ `review` → `journal_add` → `paper_xlsx` → `kb_queue`（若有 paper-kb）→ `light_checkin` → 對話總結）。
+**每日排程標準順序**：`docs/daily_push.md`（主研究軌推播）→ `docs/learner_eval.md` 的「主線 2」（學習者狀態）→ `docs/nutrition.md`（營養軌）。若使用者當次有實質互動，收尾再依 `docs/learner_eval.md` 裡的「瑣碎記憶」「論文閱讀.xlsx 自動登錄」「對話總結」章節處理（done 收尾順序：`recall`（若有，順帶驗收舊概念）→ `review` → `journal_add` → `paper_xlsx` → `sheet_sync`（若有 Google Sheet）→ `kb_queue`（若有 paper-kb）→ `light_checkin` → 對話總結）。
 
 ## 系統檔案速覽
-`mentor.py`／`nutrition.py`／`paperlog.py`（由 `mentor.py paper_xlsx` 呼叫） 是系統程式；所有狀態存在本資料夾固定檔案，**不要**寫進暫存 outputs。完整檔案表格、可否重置、`mentor.py` 修改鐵則（F/F2）見 `docs/dev_maintenance.md`。
+`mentor.py`／`nutrition.py`／`paperlog.py`（由 `mentor.py paper_xlsx` 呼叫）／`sheetsync.py`（匯出 xlsx 列給 Google Sheet） 是系統程式；所有狀態存在本資料夾固定檔案，**不要**寫進暫存 outputs。完整檔案表格、可否重置、`mentor.py` 修改鐵則（F/F2）見 `docs/dev_maintenance.md`。
 
 bash 路徑：`$HOME/mnt/<專案資料夾>`（host 路徑因人而異，記在 `profile.md`）。論文知識庫 paper-kb 的整合見 `docs/paper_kb.md`。

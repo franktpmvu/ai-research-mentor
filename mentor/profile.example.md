@@ -16,3 +16,4 @@
 
 ## 路徑（選填）
 - 主專案與論文知識庫在你電腦上的路徑。
+- （選用）論文閱讀 Google Sheet ID：`<你的 spreadsheet ID>`——填了 done 時會同步到 Google Sheet，不填就只寫本機 xlsx

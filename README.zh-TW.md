@@ -40,6 +40,10 @@ python update.py
 
 所有指令見 [`mentor/docs/commands.md`](mentor/docs/commands.md)；論文知識庫的工具見 [`paper-kb/README.md`](paper-kb/README.md)。
 
+## 文獻強制核實
+
+LLM 會記錯標題、甚至編出不存在的論文。`mentor/refcheck.py` 用 arXiv 官方 API 與本機 paper-kb 核對每一筆文獻；其他來源（期刊、書、部落格）必須上網打開並登記證據網址。程式在三個入口把關、沒有略過開關：論文進記憶（`mem_add`）、每日推播（`push_log`，每篇都要有已核實的出處網址）、閱讀紀錄（`paper_xlsx`，主文獻與每一條補強文獻）。規則見 [`mentor/docs/refcheck.md`](mentor/docs/refcheck.md)。
+
 ## 個人設定（唯一需要自己填的地方，都不會上傳）
 
 | 檔案 | 內容 | 沒有的話 |

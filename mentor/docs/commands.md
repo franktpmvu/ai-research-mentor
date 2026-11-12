@@ -12,7 +12,8 @@ check_dup --title "..." [--url "..."]     程式化重複判定（掃記憶+epis
 kg_check --id <pid>                        先修守門（main 每篇必跑）：🟢可推/🔴LOCKED禁跳(exit3)/UNKNOWN先kg_add
 kg_add --id <pid> --title .. --domain .. [--prereqs "a||b"] [--level N] [--spontaneous]  放新論文入圖(接先修邊)
 kg_frontier [domain] / kg_show [domain]   列可推前沿 / 樹狀看進度   ·  kg_link --id <p> --prereqs "a||b" [--remove]
-mem_add / trend_add                       寫回導師記憶（含 rubric、--pid）；wild 軌免 mem_add
+mem_add / trend_add                       寫回導師記憶（含 rubric、--pid）；wild 軌免 mem_add；新論文先強制核實
+refcheck check|text|manual|audit_xlsx|ledger   文獻強制核實（也可 python3 refcheck.py ...；規則見 docs/refcheck.md）
 push_log --papers "..." --dry             呈現前預檢：驗組成/anchor/main 的 KG 守門，不寫檔（未過 exit 3 → 換片再呈現）
 push_log --papers "pid::role[::anchor|::title][::url]||..."  推播驗收：3主+≥1跨域+1金融+3wild；
                                           xdomain/finance 必填 anchor；wild 第三欄填標題、第四欄填 url（建議）；

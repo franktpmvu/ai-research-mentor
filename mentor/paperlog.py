@@ -369,6 +369,9 @@ def main(argv):
     if f.get("flush"):
         flush(); return
     entry = build_entry(f)
+    # 2026-11-12 文獻強制核實：主文獻＋【補強文獻】每一條都要查得到才寫入（沒有略過開關）
+    import refcheck
+    refcheck.gate_entry(entry["title"], entry["url"], entry["authors"], entry["year"] or "", entry["question"])
     if not entry["note"]:
         print("⚠️ journal 裡沒有使用者原話，note 會是空的")
     if f.get("dry"):

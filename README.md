@@ -42,6 +42,10 @@ The mentor is **rules for an AI to read plus commands for it to run** — it is 
 
 All commands: [`mentor/docs/commands.md`](mentor/docs/commands.md). Paper knowledge base tools: [`paper-kb/README.md`](paper-kb/README.md).
 
+## Reference verification (mandatory)
+
+LLMs can misremember titles or invent papers. `mentor/refcheck.py` checks every reference against the official arXiv API and your local paper-kb; anything else (journals, books, blogs) must be opened on the web and logged with an evidence URL. It is enforced in code at three points with no bypass flag: adding a paper to memory (`mem_add`), the daily push (`push_log` — every item needs a verified source link), and the reading log (`paper_xlsx` — the main paper and every "further reading" entry). Rules: [`mentor/docs/refcheck.md`](mentor/docs/refcheck.md).
+
 ## Personal settings (the only things you fill in; never uploaded)
 
 | File | Contents | If it's missing |

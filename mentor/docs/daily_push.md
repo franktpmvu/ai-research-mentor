@@ -90,11 +90,12 @@ week（近一週·7天） → month（近一月·30天） → half_year（近半
 2. 依今日想法軸上網搜尋三領域「最近的變化」，避免重複既有記憶。
 3. **每篇候選先程式化驗重複**：`python3 mentor.py check_dup --title "..." [--url "..."]`
    → 🟢CLEAR 才推；🔴HIT 換一篇（複習例外須在推薦理由明講）；🟡疑似則人工確認。
-4. 重要文獻寫回記憶＋rubric：`mem_add --title ... --domain <D> --url ... --summary ... --importance <1-10> --rubric "..." --pid <slug>`；趨勢用 `trend_add`。
+4. 重要文獻寫回記憶＋rubric（`mem_add` 會先強制核實標題與網址，未過 exit 5，見 `docs/refcheck.md`）：`mem_add --title ... --domain <D> --url ... --summary ... --importance <1-10> --rubric "..." --pid <slug>`；趨勢用 `trend_add`。
 5. **推播後必跑 `push_log`（A. 程式化驗收）**：
    `python3 mentor.py push_log --papers "pid::main||pid2::xdomain::<anchor>||pid3::finance::<anchor>||pid4::wild::<標題>||..."`
    - role ∈ main / xdomain / finance / wild / review；**xdomain 與 finance 的 anchor（回接的主領域機制）必填**；**wild 第三欄改填標題**（防重用，免 anchor）。
    - 驗組成：3 主領域 + ≥1 跨域 + 1 金融 + 3 wild（**2026-08-06 起無放寬情境，一律要求完整組成**；沒力氣深讀時走 `light_checkin` 超輕量打卡，不要期待 push_log 自動放寬）；**並對每篇 main 驗 KG 守門（LOCKED/UNKNOWN → exit 3）**；未達標 exit 3 → 補推缺軌/換先修前沿後同日重跑覆蓋。
+   - **文獻強制核實（2026-11-12）**：每篇都要附第四欄出處網址並已核實（main 另驗標題）——未核實與缺 anchor 同級 exit 3；非 arXiv 出處先上網打開再 `refcheck.py manual` 登記。見 `docs/refcheck.md`。
    - **呈現給使用者前先跑 `push_log --papers "..." --dry` 預檢**（同樣驗收但不寫檔）——通過才呈現，使用者永遠不看到鎖定論文。
 6. `python3 mentor.py mem_consolidate` → 升層/淡出，完成記憶自優化。
 
