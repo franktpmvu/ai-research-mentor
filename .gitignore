@@ -21,6 +21,10 @@ mentor/nutrition_roadmap.json
 mentor/pending_interests.md
 mentor/paper_xlsx_pending.json
 mentor/ref_ledger.json*
+mentor/concepts.json
+mentor/kyc.json
+mentor/Screenshot*.png
+mentor/*.bak
 mentor/*.xlsx
 mentor/~$*
 
@@ -29,6 +33,10 @@ paper-kb/data/
 paper-kb/input_raw/
 paper-kb/corpus/
 paper-kb/.venv/
+paper-kb/models/
+paper-kb/eval/*.jsonl
+paper-kb/eval/results/
+paper-kb/HANDOFF_*.md
 
 # ── 其他 ──
 __pycache__/

@@ -2,3 +2,5 @@
 mcp>=2.3,<3
 # 跑 update.py（解析 PDF）：Python 3.11+
 pymupdf4llm==2.1
+# 向量 encoder（RAG）：embedding 由 Ollama 計算
+numpy>=1.26

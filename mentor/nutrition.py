@@ -4,6 +4,13 @@
 設計：獨立藍圖(nutrition_roadmap.json) + 每日推播紀錄(nutrition_log.json)。
 理論實作各半、每天一則。省 token：LLM 一律透過本 CLI 讀狀態，勿直接 Read 大 JSON。"""
 import json, os, sys, argparse, datetime, re
+# 時區固定 Asia/Taipei：執行環境的 VM 是 UTC，07:00 排程＝UTC 前一天 23:00，
+# 不固定的話 date.today() 會把推播記成「昨天」，並讓 daily_brief 誤判今日狀態。（2026-11-17）
+os.environ["TZ"] = "Asia/Taipei"
+try:
+    import time as _tz_time; _tz_time.tzset()
+except Exception:
+    pass
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 RM = os.path.join(BASE, "nutrition_roadmap.json")
@@ -125,7 +132,7 @@ def cmd_streak(a):
     log = _load(LOG, {"pushes": []})
     days = sorted({p.get("date") for p in log.get("pushes", []) if p.get("date")})
     if not days:
-        print("尚無紀錄。開始第一天吧，習慣 > 完美 ✓")
+        print("尚無紀錄。")
         return
     # 目前連續天數
     dset = set(days)

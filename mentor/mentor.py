@@ -63,6 +63,7 @@ Commands:
                                             記錄舊概念驗收：pass 拉長下次間隔；fail 記盲區、間隔歸零（連錯兩次才扣分）
   recall_due [--all]                       （選用）使用者主動說「考我」時，列出最該複習的舊概念
   skill_map [--rebuild]                    ASCII 技能地圖（0–5 級）；--rebuild 依全部歷史重算
+  review_mode <pick|concept_add|concept_log|concepts|kyc_add|kyc_show> ...  概念複習＋學習者畫像（見 review_mode.py / docs/review_mode.md）
 
   ── 論文知識庫 paper-kb 整合（2026-11-11；沒裝 paper-kb 時這些指令只提示、不報錯）──
   kb_search "<英文關鍵字>" [--k 5]          在你讀過/收藏的論文全文裡搜尋（附頁碼、para_id）
@@ -72,6 +73,13 @@ Commands:
 
 import json, sys, os, random
 from datetime import date, datetime, timedelta
+# 時區固定 Asia/Taipei：執行環境的 VM 是 UTC，07:00 排程＝UTC 前一天 23:00，
+# 不固定的話 date.today() 會把推播記成「昨天」，並讓 daily_brief 誤判今日狀態。（2026-11-17）
+os.environ["TZ"] = "Asia/Taipei"
+try:
+    import time as _tz_time; _tz_time.tzset()
+except Exception:
+    pass
 
 BASE        = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE  = os.path.join(BASE, "state.json")
@@ -900,7 +908,7 @@ def daily_push(week=None):
         print()
 
     print("─" * 54)
-    print("  沒興趣也沒關係，明天再說。習慣 > 完美。")
+    print("  沒興趣就略過，明天照常推播。")
     return papers
 
 # ─────────────────────────────────────────────
@@ -1083,7 +1091,7 @@ def _check_week_completion():
                 groups_done.add(gid)
     if groups_done >= target_gids and not state["weekly_gates"].get(f"week_{w}", False):
         state["weekly_gates"][f"week_{w}"] = True
-        print(f"\n🎉 Week {w} 目標 group 全通關！執行 weekly_review {w} 進行週回顧，解鎖 Week {w+1}")
+        print(f"\n  Week {w} 目標 group 已全部通過。執行 weekly_review {w} 進行週回顧以解鎖 Week {w+1}。")
     save(STATE_FILE, state)
 
 # ─────────────────────────────────────────────
@@ -1428,7 +1436,7 @@ def _qualifies_promotion(item, passed_ids=frozenset(), window=7, target=None):
       long_term 入口額外門檻 = (learner 通過 且 imp>=8) 或 seen_count>=3
     """
     qual = (item.get("seen_count", 1) >= PROMOTE_SEEN_COUNT
-            or item.get("importance", 0) >= PROMOTE_IMPORTANCE
+            or item.get("importance", 0) >= 8  # 2026-11-13: 單靠 importance 晉升門檻 7→8（審查: imp=7 近乎人人填, 等於橡皮圖章）
             or item.get("id") in passed_ids)
     if not qual:
         return False
@@ -1773,7 +1781,13 @@ def review(flags):
         print('用法: review --paper <id> --result pass|fail [--depth N --domain D --blindspots "a||b" --note "..."]')
         return
     passed = result == "pass"
-    depth = int(flags.get("depth", 3 if passed else 1))
+    _rawd = flags.get("depth")
+    if _rawd is None or _rawd is True:
+        depth = 1
+        if passed:
+            print("  ⚠ pass 未指定 --depth：預設 1（表層·不推進領域）。機制層通過請明確 --depth 2-4。")
+    else:
+        depth = max(0, min(4, int(_rawd)))
     domain, title, _rub, _qs, src = _lookup_paper(paper_id)
     if domain is None:
         domain = flags.get("domain", "cross"); title = paper_id
@@ -2263,8 +2277,7 @@ def _memory_snapshot_md():
         # 2026-08-05：連續/總天數改用 _streak_stats() 動態推導（不信任可能過期的 state 欄位）；
         # 節流/精簡模式已移除（超輕量模式 light_checkin 取代其功能）。
         _tot, _cur, _last = _streak_stats()
-        lines.append(f"- 進度：Week {prog.get('current_week','?')} Day {prog.get('current_day','?')} · "
-                     f"{prog.get('quarter','?')} · 總互動{_tot}天/目前連續{_cur}天(最近{_last or '無'})")
+        lines.append(f"- 進度：總互動{_tot}天/目前連續{_cur}天(最近{_last or '無'})")
         db = prog.get("domain_balance", {})
         if db:
             lines.append(f"- 領域平衡：CV={db.get('cv',0)} LLM={db.get('llm',0)} Diff={db.get('diffusion',0)}")
@@ -2727,7 +2740,7 @@ def light_checkin(flags):
         save(STATE_FILE, state)
         print(f"   📍 已記錄方向回饋：「{interest}」→ 下次規劃會依此重新搜尋、調整推薦。")
         print("   （只是隨口一提也沒關係，之後想到再說都可以）")
-    print("   習慣 > 完美 ✓")
+    print("   （今日記錄完成。）")
 
 def redirect_clear():
     """處理完使用者的方向回饋、重新搜尋並調整推薦後，清掉待處理標記。
@@ -2741,15 +2754,9 @@ def redirect_clear():
 
 
 def _phase_focus(week):
-    """Return (quarter, theme, weekly_goals-dict) for a week from roadmap.json."""
-    road = load(ROAD_FILE)
-    q = "Q1" if week <= 13 else "Q2" if week <= 26 else "Q3" if week <= 39 else "Q4"
-    quarters = road.get("quarters", {})
-    theme = quarters.get(q, {}).get("theme", "")
-    goals = quarters.get(q, {}).get("weekly_goals", {}).get(str(week), {})
-    if isinstance(goals, dict):
-        goals = {k: v for k, v in goals.items() if k in ("cv", "llm", "diffusion")}
-    return q, theme, goals
+    """2026-11-13：使用者移除「一年 52 週學習藍圖」(徒增管理風險、且 current_week 早已凍結)。
+    保留簽名以相容呼叫端，一律回空——不再讀 roadmap.json、不再有季度/主題/週目標。"""
+    return "", "", {}
 
 def roadmap_set(flags):
     """D. 滾動擴充 52 週藍圖：把某週三軌目標寫回 roadmap.json（內容由 LLM 生成）。
@@ -2791,7 +2798,7 @@ def roadmap_set(flags):
 def _print_week_plan(plan):
     lv = plan.get("levels", {})
     print("─" * 54)
-    print(f"  Week {plan['week']}  {plan.get('quarter', '')} · {plan.get('theme', '')}")
+    print(f"  7 天想法軸輪轉計畫（{plan.get('generated','')} 產生）")
     print(f"  等級  CV={lv.get('cv')} LLM={lv.get('llm')} Diff={lv.get('diffusion')}")
     pf = plan.get("phase_focus", {})
     for d in ("cv", "llm", "diffusion"):
@@ -2820,10 +2827,6 @@ def week_plan(argv):
         xbase = state["progress"].get("xsrc_base", 0)
         levels = {d: state["learner"].get(LEVEL_KEY[d], "A") for d in ("cv", "llm", "diffusion")}
         q, theme, goals = _phase_focus(w)
-        if not goals:
-            print(f"  ⚠ roadmap.json 尚無 Week {w} 三軌目標（D. 藍圖滾動擴充）：")
-            print(f"    → LLM 請依上週結果與 {q} 主題生成本週 cv/llm/diffusion 目標並寫回：")
-            print(f'      python3 mentor.py roadmap_set --week {w} --cv "..." --llm "..." --diffusion "..."')
         nx = len(XDOMAIN_SOURCES)
         days = [{
             "day": i + 1,
@@ -2861,12 +2864,12 @@ def daily_brief():
        讀 week_plan + trimmed memory；並用 episodic 日期程式化驗證本週執行進度。"""
     state = load(STATE_FILE); p = state["progress"]
     mem = load_memory()
-    cw = p["current_week"]
     plan = load(WEEKPLAN_FILE) if os.path.exists(WEEKPLAN_FILE) else None
     print("\n🌅 每日簡報 daily_brief")
     print("=" * 54)
-    if not plan or plan.get("week") != cw:
-        print(f"  ⚠ 本週 (Week {cw}) 尚無計畫或計畫過期。")
+    _stale = bool(plan) and _days_between(plan.get("generated", "1970-01-01")) > 7
+    if not plan or _stale:
+        print("  ⚠ 尚無想法軸輪轉計畫或已過期（>7 天）。")
         print("  → 先執行（每週一次·讀長文規劃）：python3 mentor.py week_plan new")
         print("=" * 54)
         return None
@@ -2875,15 +2878,26 @@ def daily_brief():
     ep_dates = {e.get("date", "") for e in mem["episodic"]
                 if e.get("date", "") >= gen and e.get("status") in active}
     pl_dates = {e.get("date", "") for e in _load_pushlog() if e.get("date", "") >= gen}
-    pushed_dates = sorted(ep_dates | pl_dates)  # 推播事件(push_log) ∪ 互動事件(episodic)
+    pushed_dates = sorted(ep_dates | pl_dates)  # 推播事件(push_log) ∪ 互動事件(episodic)：算「執行日」
     today_str = str(date.today())
-    already_today = today_str in pushed_dates
+    # 2026-11-17：「今日已推」只認真的推了論文（當天 push_log composition.main >= 3），
+    # 只有 light_checkin 打卡／episodic 互動不算——否則會把漏推蓋掉。
+    really_pushed_today = any(
+        e.get("date") == today_str and (e.get("composition") or {}).get("main", 0) >= 3
+        for e in _load_pushlog())
+    touched_today = today_str in pushed_dates
     done = len(pushed_dates)
-    slot_idx = max(0, min((done - 1) if already_today else done, 6))
+    done_before = len([d for d in pushed_dates if d != today_str])
+    slot_idx = max(0, min(done_before, 6))
     slot = plan["days"][slot_idx]
     lv = plan.get("levels", {})
-    print(f"  {today_str}  Week {cw} · 計畫 Day {slot_idx + 1}/7"
-          f"{'（今日已推）' if already_today else ''}")
+    if really_pushed_today:
+        _tag = "（今日已推）"
+    elif touched_today:
+        _tag = "（今日僅有打卡/互動、尚未推論文 → 照常推播）"
+    else:
+        _tag = ""
+    print(f"  {today_str}  · 計畫 Day {slot_idx + 1}/7{_tag}")
     print(f"  等級  CV={lv.get('cv')} LLM={lv.get('llm')} Diff={lv.get('diffusion')}")
     rn = p.get("redirect_note")
     if rn:
@@ -2892,7 +2906,7 @@ def daily_brief():
     print(f"  ▸ 今日想法軸：「{slot['idea_axis']}」")
     nm = {"cv": "CV", "llm": "LLM", "diffusion": "Diffusion"}
     srcs = slot.get("xdomain_sources") or [slot.get("xdomain_source", "")]
-    print("  ▸ 今日跨域鏡子（1–3 篇，越多越好；鼓勵每主領域各配一篇、來源各不同）:")
+    print("  ▸ 今日跨域鏡子（1–3 篇，越多越好；建議每主領域各配一篇、來源各不同）:")
     for mn, s in zip(("cv", "llm", "diffusion"), srcs):
         print(f"      {nm[mn]} ← {s}")
     fin_dom = ("llm", "diffusion", "cv")[slot_idx % 3]
@@ -3000,6 +3014,22 @@ def integrity():
             ok = False; print(f"  ❌ {base} 解析失敗: {ex}")
     if os.path.exists(MEMORY_FILE):
         print("  ⚠ 遺留單檔 memory.json 仍存在（正常情況應已遷移為 memory/ 切檔）")
+    # 跨檔參照一致性（2026-11-13 審查後補）：KG 先修 slug 必須指向真實節點
+    try:
+        _kgj = _load_kg(); _nds = _kgj.get("nodes", {})
+        _orphan = {q: [r for r in _nd.get("prereqs", []) if r not in _nds]
+                   for q, _nd in _nds.items() if any(r not in _nds for r in _nd.get("prereqs", []))}
+        _nopre = [q for q, _nd in _nds.items()
+                  if not _nd.get("spontaneous") and _nd.get("domain") in ("cv", "llm", "diffusion")
+                  and not _nd.get("prereqs") and not _nd.get("entry")]
+        if _orphan:
+            print(f"  ⚠ KG 先修參照斷裂 {len(_orphan)} 節點（指向不存在先修→假鎖死/放行跳級）: {dict(list(_orphan.items())[:8])}")
+        else:
+            print("  ✅ KG 先修參照一致（無孤兒 slug）")
+        if _nopre:
+            print(f"  ⚠ 主領域節點無先修且非入門 {len(_nopre)} 個（恐繞過防跳級）: {_nopre[:12]}")
+    except Exception as _ex:
+        print(f"  ⚠ KG 參照檢查略過: {_ex}")
     if ok:
         print("  → 完整性 OK，可進行每日流程。")
     else:
@@ -3124,6 +3154,8 @@ def kg_add(flags):
         except Exception: pass
     if flags.get("spontaneous"):
         node["spontaneous"] = True
+    if flags.get("entry"):
+        node["entry"] = True
     if isinstance(flags.get("prereqs"), str):
         new_pre = _split_multi(flags["prereqs"])
         node["prereqs"] = (new_pre if flags.get("replace")
@@ -3136,6 +3168,9 @@ def kg_add(flags):
     print(f"✅ kg_add {pid} {tag}  domain={node['domain']}  L{node.get('level','?')}  prereqs={node['prereqs'] or '無'}")
     if missing:
         print(f"  ⚠ 這些先修尚未建節點（記得補 kg_add，否則會被視為未通過而鎖住）：{missing}")
+    if (not node.get("spontaneous") and node.get("domain") in ("cv", "llm", "diffusion")
+            and not node["prereqs"] and not flags.get("entry")):
+        print("  ⚠ 主領域節點無先修且非入門：恐繞過防跳級守門。請補 --prereqs，或確認是入門節點後加 --entry。")
 
 def kg_link(flags):
     """增/刪先修邊。用法: kg_link --id <pid> --prereqs "a||b" [--remove]"""
@@ -3309,6 +3344,7 @@ def main():
     elif cmd == "recall_due":      recall_due(_parse_flags(sys.argv[2:]))
     elif cmd == "recall_related":  recall_related(_parse_flags(sys.argv[2:]))
     elif cmd == "recall":          recall(_parse_flags(sys.argv[2:]))
+    elif cmd == "review_mode":     import review_mode; review_mode.main(sys.argv[2:])
     elif cmd == "skill_map":       skill_map(_parse_flags(sys.argv[2:]))
     elif cmd == "kb_search":       kb_search(sys.argv[2:])
     elif cmd == "kb_read":         kb_read(sys.argv[2:])
@@ -3324,4 +3360,5 @@ if __name__ == "__main__":
 # rev: 2026-11-11c paper-kb integration (kb_search/kb_read/kb_queue)
 # rev: 2026-11-11b embedded-recall(recall_related), no standalone quiz
 # rev: 2026-11-11 spaced-recall + skill_map(0-5) + recall-confirmed promotion
+# rev: 2026-11-18 review_mode dispatch (concept-level review + KYC)
 # EOF-SENTINEL: mentor.py 完整結尾（integrity 驗此標記；此行必須在檔案最後）

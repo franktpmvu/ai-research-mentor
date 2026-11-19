@@ -53,7 +53,7 @@ def ensure_deps():
         say(f'⚠️ 目前 Python {platform.python_version()}；解析 PDF 需要 3.11 以上（pymupdf4llm 2.1）。'
             f'只用 server 的話 3.10 也可以。')
     missing = []
-    for mod in ('mcp', 'pymupdf4llm'):
+    for mod in ('mcp', 'pymupdf4llm', 'numpy'):
         try:
             __import__(mod)
         except ImportError:

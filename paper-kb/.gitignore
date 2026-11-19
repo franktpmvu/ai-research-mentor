@@ -8,3 +8,8 @@ __pycache__/
 .venv/
 data/derived/.maintain.lock
 config.json
+models/
+eval/questions_raw.jsonl
+eval/questions.jsonl
+eval/qrels.jsonl
+eval/results/

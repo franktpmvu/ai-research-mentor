@@ -67,7 +67,7 @@ LLM 會記錯標題、甚至編出不存在的論文。`mentor/refcheck.py` 用 
 
 ## 致謝
 
-`mentor/docs/learner_eval.md` 的蘇格拉底式提問規則與技能地圖（0–5 級），參考了 Jane Street 的 [agent_skills / socratic-tutor](https://github.com/janestreet/agent_skills)（MIT）。
+蘇格拉底式提問規則（`mentor/docs/socratic.md`）與技能地圖（0–5 級，`mentor/docs/learner_state.md`），參考了 Jane Street 的 [agent_skills / socratic-tutor](https://github.com/janestreet/agent_skills)（MIT）。
 
 ## 授權
 

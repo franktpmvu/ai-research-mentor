@@ -1,9 +1,15 @@
 {
+  "zotero_dir": "C:\\Users\\you\\Zotero",
+  "_zotero_說明": "選用：Zotero 資料目錄（Zotero 設定→進階→檔案和資料夾）。填了 update.py 會一併盤點其 storage/ 裡的 PDF（只讀不搬）；不填就略過",
   "_說明": "複製成 config.json 再改；沒有 config.json 也能跑（mine 視為空）",
   "mine": {
     "myPaper2024_refs": [
       "MyPaper2024_cameraready",
       "2401.00000"
     ]
-  }
+  },
+  "embed_models": [
+    "qwen3-embedding:0.6b"
+  ],
+  "_embed_說明": "選用：向量 encoder（RAG）用的 Ollama embedding 模型，第一個是 semantic_search 的預設。需要先 ollama pull；沒開 Ollama 時 update.py 會略過向量"
 }

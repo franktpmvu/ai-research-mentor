@@ -71,7 +71,7 @@ Your learning records (`state.json`, `learner.json`, `journal/`, `memory/`, …)
 
 ## Acknowledgements
 
-The Socratic questioning rules and the 0–5 skill map in `mentor/docs/learner_eval.md` draw on Jane Street's [agent_skills / socratic-tutor](https://github.com/janestreet/agent_skills) (MIT).
+The Socratic questioning rules (`mentor/docs/socratic.md`) and the 0–5 skill map (`mentor/docs/learner_state.md`) draw on Jane Street's [agent_skills / socratic-tutor](https://github.com/janestreet/agent_skills) (MIT).
 
 ## License
 

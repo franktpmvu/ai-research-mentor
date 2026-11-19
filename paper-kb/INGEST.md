@@ -14,6 +14,10 @@ python update.py
 
 跑完看 `data/derived/update_log.md` 的最後一段，就知道這次新增了什麼、補了哪些洞。
 
+### Zotero 收藏（選用）
+
+在 `config.json` 填 `"zotero_dir": "F:\\Zotero"`（你的 Zotero 資料目錄），`update.py` 會在②盤點時一併掃 `<zotero_dir>/storage/` 裡的 PDF，當成「你的收藏」（source=collection）。Zotero 的檔案**只讀不搬不改**，registry 記絕對路徑。在 Zotero 新增論文 → 同步完 → 跑 `python update.py` 就會進索引。沒填就略過。
+
 ## 流程
 
 | 步驟 | 做什麼 | 只處理變動的部分？ |

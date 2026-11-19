@@ -1,61 +1,59 @@
-# 指令速查（Commands Reference）— docs/commands.md
+# 指令速查
 
-> 入口：../CLAUDE.md。
+> 目錄：../CLAUDE.md
 
-## 指令速查
-```
-── 每日流程（順序）──
-integrity                                 0. 完整性檢查（壞了停手，禁手改 JSON）
-week_plan new [--week N --notes "..."]    每週一次·長讀規劃（roadmap 空白→先 roadmap_set）
-week_plan show / daily_brief              檢視週計畫 / 每日短讀
-check_dup --title "..." [--url "..."]     程式化重複判定（掃記憶+episodic+push_log 各含歸檔）
-kg_check --id <pid>                        先修守門（main 每篇必跑）：🟢可推/🔴LOCKED禁跳(exit3)/UNKNOWN先kg_add
-kg_add --id <pid> --title .. --domain .. [--prereqs "a||b"] [--level N] [--spontaneous]  放新論文入圖(接先修邊)
-kg_frontier [domain] / kg_show [domain]   列可推前沿 / 樹狀看進度   ·  kg_link --id <p> --prereqs "a||b" [--remove]
-mem_add / trend_add                       寫回導師記憶（含 rubric、--pid）；wild 軌免 mem_add；新論文先強制核實
-refcheck check|text|manual|audit_xlsx|ledger   文獻強制核實（也可 python3 refcheck.py ...；規則見 docs/refcheck.md）
-push_log --papers "..." --dry             呈現前預檢：驗組成/anchor/main 的 KG 守門，不寫檔（未過 exit 3 → 換片再呈現）
-push_log --papers "pid::role[::anchor|::title][::url]||..."  推播驗收：3主+≥1跨域+1金融+3wild；
-                                          xdomain/finance 必填 anchor；wild 第三欄填標題、第四欄填 url（建議）；
-                                          main 每篇驗 KG（LOCKED/UNKNOWN → exit 3）
-                                          ★ wild 一律附第四欄 url，check_dup 才能靠 URL/arXiv id 擋同一篇重推
-push_log --show [N]                       檢視近 N 天推播
-mem_consolidate / learner_state / snapshot    收尾（consolidate 附帶歸檔輪替）
+## 什麼時候用
+- 忘記指令怎麼打。每個指令「什麼時候用、驗收標準」請看右欄的細則。
+- 全部在專案資料夾執行：`python3 mentor.py <指令>`（營養軌用 `python3 nutrition.py`）。
 
-── 習慣統計／超輕量模式（2026-08-05，只在使用者主動詢問時執行 streak）──
-streak                                    總互動天數 + 目前連續天數（僅主動查詢時顯示，不進自動流程）
-light_checkin [--note "..."] [--interest "..."] [--date YYYY-MM-DD]
-                                           超輕量完成一天（免深讀評估）；--interest 記錄方向回饋供下次規劃
-redirect_clear                            清除待處理的方向回饋提示（重新搜尋、調整推薦後執行）
+## 每日推播
+| 指令 | 用途 | 細則 |
+|---|---|---|
+| `integrity` | 完整性檢查（先跑 `python3 -m py_compile mentor.py`） | `integrity.md` |
+| `daily_brief` | 每日短讀 | `daily_push.md` |
+| `week_plan new` / `week_plan show` | 每週重排想法軸輪轉＋黑名單 | `daily_push.md` |
+| `check_dup --title ".." [--url ".."]` | 程式化防重 | `paper_selection.md` |
+| `kg_add --id <pid> --title .. --domain .. [--prereqs "a\|\|b"] [--level N] [--spontaneous] [--entry]` | 論文入圖 | `knowledge_graph.md` |
+| `kg_check --id <pid>` | 先修守門 | `knowledge_graph.md` |
+| `kg_frontier [domain]` / `kg_show [domain]` / `kg_link --id .. --prereqs .. [--remove]` / `kg_seed` | 前沿／樹狀／改邊／首建 | `knowledge_graph.md` |
+| `mem_add ... --rubric ".." --pid ..` / `trend_add` | 寫回導師記憶 | `mentor_memory.md` |
+| `push_log --papers ".." [--dry]` / `push_log --show [N]` | 推播驗收 | `push_log.md` |
+| `mem_consolidate` / `learner_state` / `snapshot` | 收尾 | `daily_push.md` |
+| `mem_context` / `mem_view [layer]` | 看導師記憶 | `mentor_memory.md` |
 
-── 順帶驗收舊概念／技能地圖（2026-11-11，規則見 learner_eval.md）──
-recall_related --paper <id>               討論某篇時：列出它的先修/同技能舊概念（只給導師看）
-recall --paper <id> --result pass|fail --how mentioned|asked|followup [--depth N --note .. --blindspots "a||b"]
-                                           記錄舊概念驗收：pass 拉長間隔；單次 fail 只記盲區（連錯兩次才扣分）
-recall_due [--all]                        （選用）使用者主動說「考我」時才用
-skill_map [--rebuild]                     ASCII 技能地圖（0–5 級）；review/recall 自動更新
+## 文獻與論文庫
+| 指令 | 用途 | 細則 |
+|---|---|---|
+| `python3 refcheck.py check\|manual\|audit_xlsx\|ledger ...` | 文獻核實 | `refcheck.md` |
+| `kb_search ".." [--k 5]` / `kb_read <id> [--pages ..] [--section ..]` / `kb_queue --url ..` | paper-kb | `paper_kb.md` |
 
-── 論文知識庫 paper-kb（2026-11-11，規則見 paper_kb.md；沒裝會自動略過）──
-kb_search "<英文關鍵字>" [--k 5]          全文搜尋（附頁碼、para_id）
-kb_read <doc_id|arXiv> [--pages 3,4] [--section ..]   讀原文段落（不帶範圍只印大綱）
-kb_queue --url <網址>                      排進 paper-kb 下載佇列
+## 互動與評估
+| 指令 | 用途 | 細則 |
+|---|---|---|
+| `deep <id>` / `rubric <id>` | 出深度題／讀審查標準 | `deep_eval.md` |
+| `review --paper <id> --result pass\|fail --depth 0-4 [--blindspots ..] [--note ..] [--skills ..]` | 記錄裁決 | `deep_eval.md` |
+| `recall_related --paper <id>` / `recall --paper <id> --result .. --how mentioned\|asked\|followup ...` / `recall_due [--all]` | 順帶驗收舊概念 | `recall.md` |
+| `review_mode pick` / `concept_add` / `concept_log` / `concepts` / `kyc_add` / `kyc_show` | 概念複習＋學習者畫像（三篇都不喜歡、考我） | `review_mode.md` |
+| `skill_map [--rebuild]` | 技能地圖 | `learner_state.md` |
+| `reset_learner` | 重置使用者端（保留導師記憶） | `learner_state.md` |
+| `light_checkin [--note ..] [--interest ..] [--date ..]` | 打卡 | `light_mode.md` |
+| `redirect_clear` | 清除方向回饋提示 | `redirect.md` |
+| `streak` | 連續天數（只在使用者主動問） | `streak.md` |
 
-── 藍圖 ──
-roadmap_set --week N --cv "..." --llm "..." --diffusion "..." [--criteria_cv "a||b" ... --force]
+## done 收尾
+| 指令 | 用途 | 細則 |
+|---|---|---|
+| `journal_add --user ".." --mentor ".." --tag .. --domain .. --title ..` / `journal_list` | 逐字保存 | `journal.md` |
+| `paper_xlsx --pid .. --journal .. --question .. --context .. [--title --url --year --authors --bg] [--replace] [--dry]` / `paper_xlsx --flush` | 寫 論文閱讀.xlsx | `paper_xlsx.md` |
+| `python3 sheetsync.py rows N` / `rows 2-<末列>` / `header` | 匯出給 Google Sheet | `sheet_sync.md` |
 
-── 評估與記憶 ──
-rubric <id> / review --paper <id> --result pass|fail [--depth 0-4 ...]
-journal_add --user "..." [--mentor "..." --tag slug --domain D --title "..."] / journal_list
-paper_xlsx --pid ID --journal f1,f2 --question q.txt --context ctx.txt [--title --url --year --authors --bg] [--replace] [--dry] / paper_xlsx --flush   # 寫入 論文閱讀.xlsx（規則見 learner_eval.md）
-boot / daily / status / groups / tree [domain] / mem_context / mem_view [layer]
-learner_state / reset_learner / weekly_review <w> "a1" "a2" "a3" / calibrate ...
+## 營養軌
+| 指令 | 用途 |
+|---|---|
+| `nutrition.py brief` / `check_dup --title ..` / `log --topic .. --kind ..` / `roadmap_set --week N ..` / `show` / `streak` | 見 `nutrition.md` |
 
-── 營養學獨立軌（2026-08-10，用 python3 nutrition.py，與 mentor.py 分離）──
-nutrition.py brief                        每日短讀：本週主題(理論+實作)、近14則防重、本季主題
-nutrition.py check_dup --title "..."       主題防重（🟢CLEAR 才推）
-nutrition.py log --topic "..." --kind theory|practice|both [--note ..] [--url ..]   記錄今日推播
-nutrition.py roadmap_set --week N --theme .. --theory .. --practice ..   滾動擴充空白週
-nutrition.py show / nutrition.py streak    看藍圖 / 看連續天數(僅主動查詢)
-```
+## 其他（少用）
+- `boot` / `status` / `groups` / `tree [domain]` / `calibrate ...`
 
-> 註：`week_plan new` 把輪轉基準存進 `state.json`（`axis_base`/`xsrc_base`），每週自動 +7 前進不重複。
+## 已停用（不要用）
+- `roadmap_set`（主軌 52 週藍圖）、`weekly_review`、`daily`（舊 curated PAPERS 流程）、`assess`（舊關鍵詞評分，僅離線後備）。

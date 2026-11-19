@@ -98,6 +98,41 @@ def search(query: str, k: int = 10, include_references: bool = False,
 
 
 @mcp.tool()
+def semantic_search(query: str, k: int = 10, mode: str = 'vector', model: str | None = None,
+                    source: str | None = None, doc_ids: list[str] | None = None) -> str:
+    """語意搜尋（向量 RAG，Ollama embedding）：用詞不同、中文問句、只記得概念時用。回傳格式和 search 相同。
+
+    - query：可以用中文或英文的完整問句（例如「擴散模型怎麼做到少步生成？」）。
+    - mode："vector"＝只用向量；"hybrid"＝全文 BM25 與向量用 RRF 合併（每筆標示來源）。
+    - model：embedding 模型（預設 config.json 的 embed_models 第一個）。
+    - source、doc_ids：同 search。已經知道在講哪篇論文時，帶 doc_ids 只在那篇裡找段落。
+    語意相近不等於原文有寫：要確認內容請用 get_document／get_paragraphs 讀原文，回答時附 para_id 與頁碼。
+    """
+    from paper_kb.encoders import vector
+    model = model or vector.models_from_config()[0]
+    ok, msg = vector.ollama_ok(model)
+    if not ok:
+        raise ToolError(msg + '；可以先改用 search（全文關鍵字）')
+    f = vector.hybrid if mode == 'hybrid' else vector.search
+    try:
+        hits = f(db(), query, model, k=max(1, min(k, 50)), doc_ids_filter=doc_ids, source=source)
+    except RuntimeError as e:
+        raise ToolError(str(e))
+    if not hits:
+        return f'沒有結果：{query}'
+    groups = {}
+    for h in hits:
+        groups.setdefault(h['doc_id'], []).append(h)
+    out = [f'{len(hits)} 段，來自 {len(groups)} 份文件（{mode}，{model}；分數高到低）']
+    for did, hs in groups.items():
+        out.append(f"\n## {hs[0]['title']}  [doc_id={did}]")
+        for h in hs:
+            out.append(f"- {h['para_id']}  p.{h['page']}  §{(h['section'] or '')[:60]}  [{h['kind']}]  "
+                       f"score={h['score']} ({h['match']})\n  {h['snippet']}")
+    return '\n'.join(out)
+
+
+@mcp.tool()
 def get_document(doc_id: str, pages: list[int] | None = None, section: str | None = None,
                  outline_only: bool = False, include_references: bool = False, max_chars: int = 60000) -> str:
     """讀一份文件的原文，每段前面標 [para_id] 與頁碼。

@@ -13,7 +13,7 @@
 
 流程：
   ① 收件  inbox/ → batches/YYMMDD_名稱/（zip 原檔保留在 _original/，旁邊解壓）
-  ② 盤點  掃 batches/ 與 corpus/*_refs/pdf/ → 算 hash，寫進 registry.csv（沒變的檔案不重算）
+  ② 盤點  掃 batches/、corpus/*_refs/pdf/ 與 Zotero storage（config.json 的 zotero_dir，選用） → 算 hash，寫進 registry.csv（沒變的檔案不重算）
   ③ 去重  同檔案（hash）、同 arXiv、同 DOI 歸成一組，每組選一份 canonical 來索引
   ④ 補洞  corpus 裡缺 PDF 的參考文獻，若在新資料中找到 → 複製過去並更新筆記
   ⑤ 解析  只解析「新的」或「解析器版本不同」的 canonical 文件
@@ -155,17 +155,33 @@ def load_registry():
         return {}
     return {r['path']: r for r in csv.DictReader(open(REG, encoding='utf-8-sig'))}
 
+def zotero_storage():
+    """config.json 的 zotero_dir（Zotero 資料目錄）→ 它底下的 storage/；沒設定或不存在就回 None。
+    Zotero 的 PDF 只讀不搬不改，registry 裡記絕對路徑。"""
+    cfg = os.path.join(ROOT, 'config.json')
+    if not os.path.exists(cfg): return None
+    try:
+        zd = json.load(open(cfg, encoding='utf-8')).get('zotero_dir', '')
+    except Exception:
+        return None
+    st = os.path.join(os.path.expanduser(zd), 'storage') if zd else ''
+    return st if st and os.path.isdir(st) else None
+
 def scan(old):
     found = {}
     roots = [('collection', BATCHES)] + [('corpus', os.path.join(CORPUS, d, 'pdf'))
                                          for d in (sorted(os.listdir(CORPUS)) if os.path.isdir(CORPUS) else [])]
+    zs = zotero_storage()
+    if zs: roots.append(('collection', zs))   # Zotero 收藏也算「你的收藏」
     for src, base in roots:
         if not os.path.isdir(base): continue
+        external = base == zs
         for dp, dn, fn in os.walk(base):
             dn[:] = [d for d in dn if d != '_original' and not d.startswith('__MACOSX')]
             for f in fn:
                 if not f.lower().endswith('.pdf'): continue
-                p = os.path.join(dp, f); rel = os.path.relpath(p, ROOT).replace('\\', '/')
+                p = os.path.join(dp, f)
+                rel = (os.path.abspath(p) if external else os.path.relpath(p, ROOT)).replace('\\', '/')
                 st = os.stat(p)
                 o = old.get(rel)
                 if o and o['size'] == str(st.st_size) and o['mtime'] == str(int(st.st_mtime)):
@@ -182,6 +198,11 @@ def scan(old):
                                   head=head, group='', canonical='', role='', parsed_ver=(o or {}).get('parsed_ver', ''),
                                   indexed_ver=(o or {}).get('indexed_ver', ''),
                                   added=(o or {}).get('added', TODAY), status='changed' if o else 'new')
+    # Windows 磁碟路徑（例如 Zotero 的 F:/...）在非 Windows 環境讀不到：保留原紀錄，不當作已刪除
+    if os.name != 'nt':
+        for p, o in old.items():
+            if p not in found and re.match(r'^[A-Za-z]:/', p):
+                found[p] = dict(o); found[p]['status'] = 'unchanged'
     removed = [p for p in old if p not in found]
     return found, removed
 
@@ -239,6 +260,7 @@ def fill_corpus(reg):
                 if r['title_guess'] and len(norm(r['title_guess'])) > len(nt) + 12: continue
                 hit = r; break
             if not hit: continue
+            if not os.path.exists(os.path.join(ROOT, hit['path'])): continue   # 讀不到（例如在 Linux 跑、來源在 Windows 磁碟）：留給下次
             name = md[:-3] + '.pdf'; dst = os.path.join(folder, 'pdf', name)
             say(f'④ 補洞：{d}/{md} ← {hit["path"]}')
             n += 1
@@ -264,6 +286,14 @@ def _parse_one(path, doc_id, outdir, q):
         q.put(('ok', (d['pages'], d['stats']['n_blocks'], d.get('title', ''))))
     except Exception as e:
         q.put(('err', f'{type(e).__name__}: {e}'))
+
+
+def title_overrides():
+    cfg = os.path.join(ROOT, 'config.json')
+    try:
+        return json.load(open(cfg, encoding='utf-8')).get('title_overrides', {}) or {}
+    except Exception:
+        return {}
 
 
 def parse_and_index(reg, removed):
@@ -353,10 +383,31 @@ def parse_and_index(reg, removed):
     for did, (ag, wn, use) in getattr(citations.build, 'report', {}).items():
         if not use:
             say(f'   引用句：{did} 全文編號和筆記只吻合 {ag}/{wn}（PDF 可能是另一個版本）→ 保留筆記句子')
+    # 標題修正表（config.json 的 title_overrides）：自動抓到的標題錯了（例如抓到章節名或檔名）時用
+    for did, t in title_overrides().items():
+        db.execute('UPDATE docs SET title = ? WHERE doc_id = ?', (t, did))
     db.commit()
     say(f'⑥ 索引：寫入 {n} 份、刪除 {len(stale)} 份；索引內共 {len(index.doc_ids(db))} 份；引用關係 {nc} 筆')
     db.close()
     return bool(done or n or stale)
+
+# ---------------- ⑥b 向量（RAG） ----------------
+_T0 = __import__('time').time()
+
+def embed_vectors():
+    """幫索引裡的段落算向量（config.json 的 embed_models，需要 Ollama）。連不到 Ollama 就略過，不算失敗。"""
+    if '--no-vector' in sys.argv:
+        return
+    try:
+        from paper_kb import index
+        from paper_kb.encoders import vector
+    except ImportError as e:
+        say(f'⑥b 向量：缺少套件（{e}），略過'); return
+    db = index.connect(os.path.join(DER, 'index', 'papers.db'), readonly=True)
+    deadline = _T0 + MINUTES * 60 if MINUTES else None
+    for m in vector.models_from_config():
+        vector.update(db, m, say=say, deadline=deadline, dry=DRY)
+    db.close()
 
 # ---------------- ⑦ 發布 ----------------
 def publish(reg, removed, filled, changed_index):
@@ -389,4 +440,5 @@ if __name__ == '__main__':
     group(reg)
     filled = fill_corpus(reg)
     changed = parse_and_index(reg, removed)
+    embed_vectors()
     publish(reg, removed, filled, changed)

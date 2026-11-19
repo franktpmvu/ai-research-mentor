@@ -27,6 +27,13 @@
 import os, re, sys, json, time, difflib, unicodedata, urllib.request, urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime
+# 時區固定 Asia/Taipei：執行環境的 VM 是 UTC，07:00 排程＝UTC 前一天 23:00，
+# 不固定的話 date.today() 會把推播記成「昨天」，並讓 daily_brief 誤判今日狀態。（2026-11-17）
+os.environ["TZ"] = "Asia/Taipei"
+try:
+    import time as _tz_time; _tz_time.tzset()
+except Exception:
+    pass
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 LEDGER = os.path.join(BASE, "ref_ledger.json")
